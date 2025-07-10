@@ -12,7 +12,7 @@ services:
             redis:
                 condition: service_started
         ports:
-            - 80:4040
+            - 80:80
         stop_grace_period: 60s
         volumes:
             - ~/sharelatex_data:/var/lib/overleaf
@@ -141,7 +141,7 @@ services:
     # settings. We recommend using a properly managed nginx instance outside of the Overleaf Server Pro setup,
     # but the example here can be used if you'd prefer to run everything with docker-compose
 
-    nginx-proxy:
+    overleaf-proxy:
         image: jwilder/nginx-proxy
         container_name: overleaf-proxy
         ports:

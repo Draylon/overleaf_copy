@@ -15,6 +15,15 @@ services:
       interval: 10s
       timeout: 10s
       retries: 10
+  mongo-init:
+  image: mongo:6.0
+  depends_on:
+    mongo:
+      condition: service_healthy
+  command: >
+    bash -lc "mongosh --host mongo:27017 --eval
+    'rs.initiate({_id:\"overleaf\", members:[{_id:0, host:\"mongo:27017\"}]})' || true"
+  restart: "no"
 
   redis:
     image: redis:6.2

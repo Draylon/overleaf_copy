@@ -31,6 +31,10 @@ services:
       redis:
         condition: service_started
     environment:
+      OVERLEAF_SITE_URL: "https://overleaf.draylon.dev"
+      OVERLEAF_BEHIND_PROXY: "true"
+      OVERLEAF_SECURE_COOKIE: "true"
+    
       OVERLEAF_APP_NAME: Overleaf Community Edition
       OVERLEAF_MONGO_URL: mongodb://mongo/sharelatex?replicaSet=overleaf
       OVERLEAF_REDIS_HOST: redis
@@ -48,6 +52,8 @@ services:
       - "traefik.http.routers.overleaf.entrypoints=websecure"
       - "traefik.http.routers.overleaf.tls=true"
       - "traefik.http.services.overleaf.loadbalancer.server.port=80"
+      - "traefik.http.middlewares.force-https.redirectscheme.scheme=https"
+      - "traefik.http.routers.overleaf.middlewares=force-https"
 
 networks:
   default:

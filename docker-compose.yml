@@ -93,7 +93,7 @@ services:
 
   # Overleaf app (CE 5.x)
   sharelatex:
-    image: overleaf/overleaf:5
+    image: sharelatex/sharelatex:latest
     container_name: sharelatex
     depends_on:
       mongo:

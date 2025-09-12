@@ -16,14 +16,14 @@ services:
   mongo:
     image: mongo:6.0
     container_name: mongo
-    command: ['--replSet', 'overleaf',"--keyFile","/data/configdb/keyfile"]
+    command: ['--bind_ip_all', '--replSet', 'overleaf',"--keyFile","/data/configdb/keyfile"]
     #command: ['--bind_ip_all']
     volumes:
       - mongoconfig:/data/configdb
-      - ~/mongo_data:/data/db
+      - mongo_data:/data/db
       #- ./mongodb-init-replica-set.js:/docker-entrypoint-initdb.d/mongodb-init-replica-set.js
     environment:
-      MONGO_INITDB_DATABASE: sharelatex
+      MONGO_INITDB_DATABASE: overleaf
       MONGO_INITDB_ROOT_USERNAME: "${MONGO_INITDB_ROOT_USERNAME}"
       MONGO_INITDB_ROOT_PASSWORD: "${MONGO_INITDB_ROOT_PASSWORD}"
     healthcheck:
@@ -40,7 +40,7 @@ services:
     image: redis:6.2
     container_name: redis
     volumes:
-      - ~/redis_data:/data
+      - redis_data:/data
   
   mongo-init:
     image: mongo:6.0
@@ -87,7 +87,7 @@ services:
 
       
   sharelatex:
-    image: sharelatex/sharelatex
+    image: sharelatex/sharelatex:latest
     container_name: sharelatex
     depends_on:
       mongo:
@@ -100,20 +100,20 @@ services:
       OVERLEAF_SECURE_COOKIE: "true"
     
       OVERLEAF_APP_NAME: Overleaf Community Edition
-      OVERLEAF_MONGO_URL: "mongodb://mongo/sharelatex?directConnection=true"
+      OVERLEAF_MONGO_URL: "mongodb://${APP_DB_USER}:${APP_DB_PASS}@mongo:27017/overleaf?authSource=overleaf&replicaSet=overleaf"
       OVERLEAF_REDIS_HOST: redis
       REDIS_HOST: redis
       ENABLED_LINKED_FILE_TYPES: 'project_file,project_output_file'
       ENABLE_CONVERSIONS: 'true'
       EMAIL_CONFIRMATION_DISABLED: 'true'
     volumes:
-      - ~/sharelatex_data:/var/lib/
-    ports:
-      - 8010:80  # you can change 8010 to any available host port
+      - sharelatex_data:/var/lib/
+    #ports:
+    #  - 8010:80  # you can change 8010 to any available host port
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.overleaf.rule=Host(`overleaf.draylon.dev`)"
-      - "traefik.http.routers.overleaf.entrypoints=websecure"
+      #- "traefik.http.routers.overleaf.entrypoints=websecure"
       - "traefik.http.routers.overleaf.tls=true"
       - "traefik.http.services.overleaf.loadbalancer.server.port=80"
       - "traefik.http.middlewares.force-https.redirectscheme.scheme=https"

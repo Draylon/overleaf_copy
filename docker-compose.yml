@@ -27,10 +27,15 @@ services:
       MONGO_INITDB_ROOT_USERNAME: "${MONGO_INITDB_ROOT_USERNAME}"
       MONGO_INITDB_ROOT_PASSWORD: "${MONGO_INITDB_ROOT_PASSWORD}"
     healthcheck:
-      test: ["CMD-SHELL", "mongosh --eval 'db.adminCommand({ ping: 1 })' || exit 1"]
+      test:
+        - "CMD-SHELL"
+        - >
+          mongosh "mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@localhost:27017/admin?directConnection=true"
+          --quiet --eval 'var h=db.hello(); quit(h&&h.ok&&(h.isWritablePrimary||h.secondary)?0:1)'
       interval: 10s
       timeout: 5s
-      retries: 30
+      retries: 120
+      start_period: 30s
   redis:
     image: redis:6.2
     container_name: redis

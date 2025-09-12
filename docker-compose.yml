@@ -11,7 +11,7 @@ services:
              printf "%s" "$MONGO_REPLICA_KEY" > /data/overleaf/configdb/keyfile &&
              chmod 600 /data/overleaf/configdb/keyfile'
     volumes:
-      - mongoconfig:/data/overleaf/configdb
+      - mongoconfig:/data/overleaf/configdb:Z
     restart: "no"
   mongo:
     image: mongo:6.0
@@ -19,7 +19,7 @@ services:
     command: ['--replSet', 'overleaf',"--keyFile","/data/configdb/keyfile"]
     #command: ['--bind_ip_all']
     volumes:
-      - mongoconfig:/data/overleaf/configdb
+      - mongoconfig:/data/overleaf/configdb:Z
       - ~/mongo_data:/data/overleaf/db:Z
       #- ./mongodb-init-replica-set.js:/docker-entrypoint-initdb.d/mongodb-init-replica-set.js
     environment:

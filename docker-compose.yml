@@ -83,15 +83,24 @@ services:
             db.createUser({user:\"${APP_DB_USER}\", pwd:\"${APP_DB_PASS}\", roles:[{role:\"readWrite\", db:\"overleaf\"}]});
           }
         ";
+        # 3) create role (idempotent)
+        mongosh --host mongo --port 27017 -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval "
+          db = db.getSiblingDB("admin");
+          if (!db.getRole("clusterParameterReader")) {
+            db.createRole({
+              role: "clusterParameterReader",
+              privileges: [{ resource: { cluster: true }, actions: ["getParameter"] }],
+              roles: []
+            });
+          }";
+        
+        # 4) grant role to app user (idempotent)
+        mongosh --host mongo --port 27017 -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval "
+          db = db.getSiblingDB("overleaf");
+          db.grantRolesToUser("'"${APP_DB_USER}"'", [{ role: "clusterParameterReader", db: "admin" }]);
+        ";
       '
     restart: "no"
-
-
-
-
-
-
-
 
       
   sharelatex:

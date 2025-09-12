@@ -49,8 +49,8 @@ services:
   mongo-init:
     image: mongo:6.0
     depends_on:
-      mongo:
-        condition: service_started
+#      mongo:
+#        condition: service_started
       mongo-keyfile:
         condition: service_completed_successfully
     environment:

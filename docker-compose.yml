@@ -8,8 +8,8 @@ services:
     command: >
       sh -c 'umask 077 &&
              mkdir -p /data/configdb &&
-             printf "%s" "$MONGO_REPLICA_KEY" > /data/overleaf/configdb/keyfile &&
-             chmod 600 /data/overleaf/configdb/keyfile'
+             printf "%s" "$MONGO_REPLICA_KEY" > /data/configdb/keyfile &&
+             chmod 600 /data/configdb/keyfile'
     volumes:
       - mongoconfig:/data/overleaf/configdb:Z
     restart: "no"
@@ -24,8 +24,8 @@ services:
       #- ./mongodb-init-replica-set.js:/docker-entrypoint-initdb.d/mongodb-init-replica-set.js
     environment:
       MONGO_INITDB_DATABASE: sharelatex
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: imnottellingyou
+      MONGO_INITDB_ROOT_USERNAME: "${MONGO_INITDB_ROOT_USERNAME}"
+      MONGO_INITDB_ROOT_PASSWORD: "${MONGO_INITDB_ROOT_PASSWORD}"
     healthcheck:
       test: ["CMD-SHELL", "mongosh --eval 'db.adminCommand({ ping: 1 })' || exit 1"]
       interval: 10s
@@ -43,10 +43,10 @@ services:
       mongo:
         condition: service_healthy
     environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: imnottellingyou
-      APP_DB_USER: overleaf
-      APP_DB_PASS: overleafpwd
+      MONGO_INITDB_ROOT_USERNAME: "${MONGO_INITDB_ROOT_USERNAME}"
+      MONGO_INITDB_ROOT_PASSWORD: "${MONGO_INITDB_ROOT_PASSWORD}"
+      APP_DB_USER: "${APP_DB_USER}"
+      APP_DB_PASS: "${APP_DB_PASS}"
     command: >
       bash -lc '
         # 1) Initiate the replSet (idempotent)

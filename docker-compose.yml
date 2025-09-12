@@ -4,33 +4,23 @@ services:
   mongo:
     image: mongo:6.0
     container_name: mongo
-    command: ['--replSet', 'overleaf']
+    #command: ['--replSet', 'overleaf']
+    command: ['--bind_ip_all']
     volumes:
       - ~/mongo_data:/data/db
-      - ./mongodb-init-replica-set.js:/docker-entrypoint-initdb.d/mongodb-init-replica-set.js
+      #- ./mongodb-init-replica-set.js:/docker-entrypoint-initdb.d/mongodb-init-replica-set.js
     environment:
       MONGO_INITDB_DATABASE: sharelatex
     healthcheck:
-      test: echo 'db.stats().ok' | mongosh localhost:27017/test --quiet
+      test: ["CMD-SHELL", "mongosh --eval 'db.adminCommand({ ping: 1 })' || exit 1"]
       interval: 10s
-      timeout: 10s
-      retries: 10
-  mongo-init:
-    image: mongo:6.0
-    depends_on:
-      mongo:
-        condition: service_healthy
-    command: >
-      bash -lc "mongosh --host mongo:27017 --eval
-      'rs.initiate({_id:\"overleaf\", members:[{_id:0, host:\"mongo:27017\"}]})' || true"
-    restart: "no"
-
+      timeout: 5s
+      retries: 30
   redis:
     image: redis:6.2
     container_name: redis
     volumes:
       - ~/redis_data:/data
-
   sharelatex:
     image: sharelatex/sharelatex
     container_name: sharelatex
@@ -45,7 +35,7 @@ services:
       OVERLEAF_SECURE_COOKIE: "true"
     
       OVERLEAF_APP_NAME: Overleaf Community Edition
-      OVERLEAF_MONGO_URL: mongodb://mongo/sharelatex?replicaSet=overleaf
+      OVERLEAF_MONGO_URL: "mongodb://mongo/sharelatex?directConnection=true"
       OVERLEAF_REDIS_HOST: redis
       REDIS_HOST: redis
       ENABLED_LINKED_FILE_TYPES: 'project_file,project_output_file'

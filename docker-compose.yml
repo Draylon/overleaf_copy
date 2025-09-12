@@ -16,8 +16,16 @@ services:
   mongo:
     image: mongo:6.0
     container_name: mongo
-    command: ['--bind_ip_all', '--replSet', 'overleaf',"--keyFile","/data/configdb/keyfile"]
-    #command: ['--bind_ip_all']
+    command: >
+      bash -lc '
+        until [ -s /data/configdb/keyfile ]; do
+          echo "[mongo] waiting for /data/configdb/keyfile"; sleep 1;
+        done
+        # (optional, if your image runs as mongodb: ensure ownership)
+        chown 999:999 /data/configdb/keyfile || true
+        chmod 600 /data/configdb/keyfile
+        exec mongod --bind_ip_all --replSet overleaf --keyFile /data/configdb/keyfile
+      '
     volumes:
       - mongoconfig:/data/configdb
       - mongo_data:/data/db

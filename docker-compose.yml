@@ -4,7 +4,7 @@ services:
   mongo-keyfile:
     image: alpine:3.20
     environment:
-      MONGO_REPLICA_KEY: "${MONGO_REPLICA_KEY}"   # set in Coolify
+      MONGO_REPLICA_KEY: "${MONGO_REPLICA_KEY}"
     command: >
       sh -c 'umask 077 &&
              mkdir -p /data/configdb &&
@@ -13,125 +13,110 @@ services:
     volumes:
       - mongoconfig:/data/configdb
     restart: "no"
-
   mongo:
     image: mongo:6.0
     container_name: mongo
-    command: ["--bind_ip_all","--replSet","overleaf","--keyFile","/data/configdb/keyfile"]
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: "${MONGO_INITDB_ROOT_USERNAME}"  # set in Coolify
-      MONGO_INITDB_ROOT_PASSWORD: "${MONGO_INITDB_ROOT_PASSWORD}"  # set in Coolify
-      MONGO_INITDB_DATABASE: "overleaf"
+    command: ['--replSet', 'overleaf',"--keyFile","/data/configdb/keyfile"]
+    #command: ['--bind_ip_all']
     volumes:
-      - mongo:/data/db
       - mongoconfig:/data/configdb
+      - ~/mongo_data:/data/db
+      #- ./mongodb-init-replica-set.js:/docker-entrypoint-initdb.d/mongodb-init-replica-set.js
+    environment:
+      MONGO_INITDB_DATABASE: sharelatex
+      MONGO_INITDB_ROOT_USERNAME: "${MONGO_INITDB_ROOT_USERNAME}"
+      MONGO_INITDB_ROOT_PASSWORD: "${MONGO_INITDB_ROOT_PASSWORD}"
     healthcheck:
       test:
         - "CMD-SHELL"
-        - |
-          if [ ! -f /data/configdb/rs_initialized ]; then
-            timeout 2 bash -lc 'echo > /dev/tcp/127.0.0.1/27017' || { echo "tcp probe failed"; exit 1; }
-            exit 0
-          fi
-          mongosh "mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@localhost:27017/admin?directConnection=true" \
-            --quiet --eval 'var h=db.hello(); printjson(h); quit(h&&h.ok&&(h.isWritablePrimary||h.secondary)?0:1)'
-      interval: 5s
-      timeout: 4s
+        - >
+          mongosh "mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@localhost:27017/admin?directConnection=true"
+          --quiet --eval 'var h=db.hello(); quit(h&&h.ok&&(h.isWritablePrimary||h.secondary)?0:1)'
+      interval: 10s
+      timeout: 5s
       retries: 120
-      start_period: 60s
-
+      start_period: 30s
   redis:
-    image: redis:7-alpine
+    image: redis:6.2
     container_name: redis
     volumes:
-      - redis:/data
-
+      - ~/redis_data:/data
+  
   mongo-init:
     image: mongo:6.0
     depends_on:
-#      mongo:
-#        condition: service_started
-      mongo-keyfile:
-        condition: service_completed_successfully
+      mongo:
+        condition: service_healthy
     environment:
       MONGO_INITDB_ROOT_USERNAME: "${MONGO_INITDB_ROOT_USERNAME}"
       MONGO_INITDB_ROOT_PASSWORD: "${MONGO_INITDB_ROOT_PASSWORD}"
       APP_DB_USER: "${APP_DB_USER}"
       APP_DB_PASS: "${APP_DB_PASS}"
-    volumes:
-      - mongoconfig:/data/configdb
     command: >
       bash -lc '
-        # wait until port is open
-        for i in $(seq 1 120); do
-          if timeout 2 bash -lc "echo > /dev/tcp/mongo/27017"; then break; fi; sleep 1
-        done
-
-        # init replica set (idempotent)
+        # 1) Initiate the replSet (idempotent)
         mongosh "mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongo:27017/admin" --eval "
-          try { rs.initiate({_id:\"overleaf\", members:[{_id:0, host:\"mongo:27017\"}]}) } catch(e){ print(e) }
-          var ok=false; for (let i=0;i<120;i++){
-            const st=rs.status();
-            if (st.ok && st.members && st.members[0].stateStr===\"PRIMARY\") { ok=true; break }
+          try {
+            rs.initiate({_id: \"overleaf\", members: [{_id:0, host:\"mongo:27017\"}]})
+          } catch(e) { print(e) }
+          var ok=false; for (let i=0;i<60;i++) {
+            const st = rs.status(); if (st.ok && st.members && st.members[0].stateStr===\"PRIMARY\") { ok=true; break }
             sleep(1000)
           }
-          if(!ok){ throw new Error(\"Replica set not PRIMARY after wait\") }
+          if (!ok) { throw new Error(\"Replica set not PRIMARY after wait\") }
         ";
 
-        # app user in DB 'overleaf' (idempotent)
+        # 2) Create an application user (idempotent)
         mongosh "mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongo:27017/admin" --eval "
           db = db.getSiblingDB(\"overleaf\");
           if (!db.getUser(\"${APP_DB_USER}\")) {
             db.createUser({user:\"${APP_DB_USER}\", pwd:\"${APP_DB_PASS}\", roles:[{role:\"readWrite\", db:\"overleaf\"}]});
           }
         ";
-
-        # mark for the healthcheck
-        echo PRIMARY > /data/configdb/rs_initialized
       '
     restart: "no"
 
-  # Overleaf app (CE 5.x)
+
+
+
+
+
+
+
+      
   sharelatex:
-    image: sharelatex/sharelatex:latest
+    image: sharelatex/sharelatex
     container_name: sharelatex
     depends_on:
       mongo:
         condition: service_healthy
       redis:
         condition: service_started
-      mongo-init:
-        condition: service_completed_successfully
     environment:
-      OVERLEAF_SITE_URL: "${OVERLEAF_SITE_URL}"
+      OVERLEAF_SITE_URL: "https://overleaf.draylon.dev"
       OVERLEAF_BEHIND_PROXY: "true"
       OVERLEAF_SECURE_COOKIE: "true"
-      OVERLEAF_APP_NAME: "Overleaf Community Edition"
-      OVERLEAF_MONGO_URL: "mongodb://${APP_DB_USER}:${APP_DB_PASS}@mongo:27017/overleaf?authSource=overleaf&replicaSet=overleaf"
-      OVERLEAF_REDIS_HOST: "redis"
-      REDIS_HOST: "redis"
-      ENABLED_LINKED_FILE_TYPES: "project_file,project_output_file"
-      ENABLE_CONVERSIONS: "true"
-      EMAIL_CONFIRMATION_DISABLED: "true"
+    
+      OVERLEAF_APP_NAME: Overleaf Community Edition
+      OVERLEAF_MONGO_URL: "mongodb://mongo/sharelatex?directConnection=true"
+      OVERLEAF_REDIS_HOST: redis
+      REDIS_HOST: redis
+      ENABLED_LINKED_FILE_TYPES: 'project_file,project_output_file'
+      ENABLE_CONVERSIONS: 'true'
+      EMAIL_CONFIRMATION_DISABLED: 'true'
     volumes:
-      - sharelatex:/var/lib/overleaf
+      - ~/sharelatex_data:/var/lib/
+    ports:
+      - 8010:80  # you can change 8010 to any available host port
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.overleaf.rule=Host(`overleaf.draylon.dev`)"
+      - "traefik.http.routers.overleaf.entrypoints=websecure"
       - "traefik.http.routers.overleaf.tls=true"
       - "traefik.http.services.overleaf.loadbalancer.server.port=80"
       - "traefik.http.middlewares.force-https.redirectscheme.scheme=https"
       - "traefik.http.routers.overleaf.middlewares=force-https"
-    # Optional: expose a direct debug port (not needed with Traefik)
-    # ports:
-    #   - "8010:80"
 
 networks:
   default:
     name: overleaf-net
-
-volumes:
-  mongo: {}
-  mongoconfig: {}
-  redis: {}
-  sharelatex: {}

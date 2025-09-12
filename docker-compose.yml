@@ -4,13 +4,15 @@ services:
   mongo:
     image: mongo:6.0
     container_name: mongo
-    #command: ['--replSet', 'overleaf']
-    command: ['--bind_ip_all']
+    command: ['--replSet', 'overleaf']
+    #command: ['--bind_ip_all']
     volumes:
       - ~/mongo_data:/data/db
-      #- ./mongodb-init-replica-set.js:/docker-entrypoint-initdb.d/mongodb-init-replica-set.js
+      - ./mongodb-init-replica-set.js:/docker-entrypoint-initdb.d/mongodb-init-replica-set.js
     environment:
       MONGO_INITDB_DATABASE: sharelatex
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: imnottellingyou
     healthcheck:
       test: ["CMD-SHELL", "mongosh --eval 'db.adminCommand({ ping: 1 })' || exit 1"]
       interval: 10s
@@ -21,6 +23,49 @@ services:
     container_name: redis
     volumes:
       - ~/redis_data:/data
+  
+  mongo-init:
+    image: mongo:6.0
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: supersecret
+      APP_DB_USER: overleaf
+      APP_DB_PASS: overleafpwd
+    command: >
+      bash -lc '
+        # 1) Initiate the replSet (idempotent)
+        mongosh "mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongo:27017/admin" --eval "
+          try {
+            rs.initiate({_id: \"overleaf\", members: [{_id:0, host:\"mongo:27017\"}]})
+          } catch(e) { print(e) }
+          var ok=false; for (let i=0;i<60;i++) {
+            const st = rs.status(); if (st.ok && st.members && st.members[0].stateStr===\"PRIMARY\") { ok=true; break }
+            sleep(1000)
+          }
+          if (!ok) { throw new Error(\"Replica set not PRIMARY after wait\") }
+        ";
+
+        # 2) Create an application user (idempotent)
+        mongosh "mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongo:27017/admin" --eval "
+          db = db.getSiblingDB(\"overleaf\");
+          if (!db.getUser(\"${APP_DB_USER}\")) {
+            db.createUser({user:\"${APP_DB_USER}\", pwd:\"${APP_DB_PASS}\", roles:[{role:\"readWrite\", db:\"overleaf\"}]});
+          }
+        ";
+      '
+    restart: "no"
+
+
+
+
+
+
+
+
+      
   sharelatex:
     image: sharelatex/sharelatex
     container_name: sharelatex

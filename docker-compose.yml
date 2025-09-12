@@ -46,7 +46,9 @@ services:
     image: mongo:6.0
     depends_on:
       mongo:
-        condition: service_healthy
+        condition: service_started
+      mongo-keyfile:
+        condition: service_completed_successfully
     environment:
       MONGO_INITDB_ROOT_USERNAME: "${MONGO_INITDB_ROOT_USERNAME}"
       MONGO_INITDB_ROOT_PASSWORD: "${MONGO_INITDB_ROOT_PASSWORD}"

@@ -11,7 +11,7 @@ services:
              printf "%s" "$MONGO_REPLICA_KEY" > /data/overleaf/configdb/keyfile &&
              chmod 600 /data/overleaf/configdb/keyfile'
     volumes:
-      - mongoconfig:/data/configdb
+      - mongoconfig:/data/overleaf/configdb
     restart: "no"
   mongo:
     image: mongo:6.0
@@ -21,7 +21,7 @@ services:
     volumes:
       - mongoconfig:/data/overleaf/configdb
       - ~/mongo_data:/data/overleaf/db:Z
-      - ./mongodb-init-replica-set.js:/docker-entrypoint-initdb.d/mongodb-init-replica-set.js
+      #- ./mongodb-init-replica-set.js:/docker-entrypoint-initdb.d/mongodb-init-replica-set.js
     environment:
       MONGO_INITDB_DATABASE: sharelatex
       MONGO_INITDB_ROOT_USERNAME: root

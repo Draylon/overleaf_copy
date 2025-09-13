@@ -127,7 +127,6 @@ services:
       - sharelatex_data:/var/lib/
     #ports:
     #  - 8010:80  # you can change 8010 to any available host port
-    networks: [internal, proxy]
     labels:
       - traefik.enable=true
       - traefik.docker.network=coolify
@@ -144,9 +143,3 @@ services:
       - traefik.http.routers.overleaf-http.entrypoints=http
       - traefik.http.routers.overleaf-http.middlewares=overleaf-redirect
       - traefik.http.middlewares.overleaf-redirect.redirectscheme.scheme=https
-
-networks:
-  internal: {}
-  proxy:
-    external: true
-    name: coolify

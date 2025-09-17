@@ -103,9 +103,9 @@ services:
     restart: "no"
 
       
-  sharelatex:
+  overleaf:
     image: sharelatex/sharelatex:latest
-    container_name: sharelatex
+    container_name: overleafselfhost
     depends_on:
       mongo:
         condition: service_healthy

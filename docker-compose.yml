@@ -104,7 +104,7 @@ services:
 
       
   overleaf:
-    image: sharelatex/sharelatex:latest
+    image: "${OVERLEAF_IMAGE:-sharelatex/sharelatex:latest}"
     container_name: overleafselfhost
     depends_on:
       mongo:

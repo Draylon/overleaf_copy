@@ -123,8 +123,6 @@ services:
       ENABLED_LINKED_FILE_TYPES: 'project_file,project_output_file'
       ENABLE_CONVERSIONS: 'true'
       EMAIL_CONFIRMATION_DISABLED: 'true'
-      OVERLEAF_ALLOW_PUBLIC_ACCESS: 'true'
-      OVERLEAF_ALLOW_ANONYMOUS_READ_AND_WRITE_SHARING: 'false'
     volumes:
       - sharelatex_data:/var/lib/
     #ports:

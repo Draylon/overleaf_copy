@@ -629,11 +629,15 @@ class PaymentProviderCoupon {
    * @param {string} props.code
    * @param {string} props.name
    * @param {string} [props.description]
+   * @param {boolean} [props.isSingleUse]
+   * @param {number | null} [props.discountMonths]
    */
   constructor(props) {
     this.code = props.code
     this.name = props.name
     this.description = props.description
+    this.isSingleUse = props.isSingleUse
+    this.discountMonths = props.discountMonths
   }
 }
 
@@ -646,11 +650,14 @@ class PaymentProviderAccount {
    * @param {string} props.code
    * @param {string} props.email
    * @param {boolean} [props.hasPastDueInvoice]
+   * @param {object} [props.metadata]
+   * @param {string} [props.metadata.userId]
    */
   constructor(props) {
     this.code = props.code
     this.email = props.email
     this.hasPastDueInvoice = props.hasPastDueInvoice ?? false
+    this.metadata = props.metadata ?? {}
   }
 }
 

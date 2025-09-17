@@ -7,28 +7,59 @@ import { useCallback, useMemo } from 'react'
 import ErrorState from './error-state'
 import StartFreeTrialButton from '@/shared/components/start-free-trial-button'
 import getMeta from '@/utils/meta'
-import { sendMB } from '@/infrastructure/event-tracking'
+import {
+  populateEditorRedesignSegmentation,
+  useEditorAnalytics,
+} from '@/shared/hooks/use-editor-analytics'
+import {
+  isNewUser,
+  useIsNewEditorEnabled,
+} from '@/features/ide-redesign/utils/new-editor-utils'
+import { getSplitTestVariant } from '@/utils/splitTestUtils'
 
 export const ShortCompileTimeoutErrorState = () => {
   const { t } = useTranslation()
   const { isProjectOwner } = useCompileContext()
+  const { sendEvent } = useEditorAnalytics()
+  const newEditor = useIsNewEditorEnabled()
 
   const { compileTimeout } = getMeta('ol-compileSettings')
   const segmentation = useMemo(
-    () => ({
-      'is-owner': isProjectOwner,
-      compileTime: compileTimeout,
-    }),
-    [isProjectOwner, compileTimeout]
+    () =>
+      populateEditorRedesignSegmentation(
+        {
+          'is-owner': isProjectOwner,
+          compileTime: compileTimeout,
+          location: 'error-state',
+        },
+        newEditor
+      ),
+    [isProjectOwner, compileTimeout, newEditor]
   )
 
   const sendInfoClickEvent = useCallback(() => {
-    sendMB('paywall-info-click', {
+    sendEvent('paywall-info-click', {
       ...segmentation,
       'paywall-type': 'compile-timeout',
       content: 'blog',
     })
-  }, [segmentation])
+  }, [segmentation, sendEvent])
+
+  const extraSearchParams = useMemo(() => {
+    if (!isNewUser()) {
+      return undefined
+    }
+
+    const variant = getSplitTestVariant('editor-redesign-new-users')
+
+    if (!variant) {
+      return undefined
+    }
+
+    return {
+      itm_content: variant,
+    }
+  }, [])
 
   return (
     <ErrorState
@@ -89,6 +120,7 @@ export const ShortCompileTimeoutErrorState = () => {
             source="compile-timeout"
             buttonProps={{ variant: 'premium', size: 'sm' }}
             segmentation={segmentation}
+            extraSearchParams={extraSearchParams}
           >
             {t('start_a_free_trial')}
           </StartFreeTrialButton>

@@ -2,10 +2,14 @@ import { useUserSettingsContext } from '@/shared/context/user-settings-context'
 import getMeta from '@/utils/meta'
 import { isSplitTestEnabled, getSplitTestVariant } from '@/utils/splitTestUtils'
 
+export const ignoringUserCutoffDate =
+  new URLSearchParams(window.location.search).get('skip-new-user-check') ===
+  'true'
 // TODO: change this when we have a launch date
 const NEW_USER_CUTOFF_DATE = new Date('2100-01-01')
 
-const isNewUser = () => {
+export const isNewUser = () => {
+  if (ignoringUserCutoffDate) return true
   const user = getMeta('ol-user')
 
   if (!user.signUpDate) return false
@@ -25,7 +29,8 @@ export const canUseNewEditorViaNewUserFeatureFlag = () => {
     !canUseNewEditorViaPrimaryFeatureFlag() &&
     isNewUser() &&
     (newUserTestVariant === 'new-editor' ||
-      newUserTestVariant === 'new-editor-old-logs')
+      newUserTestVariant === 'new-editor-old-logs' ||
+      newUserTestVariant === 'new-editor-new-logs-old-position')
   )
 }
 
@@ -36,10 +41,22 @@ export const canUseNewEditor = () => {
   )
 }
 
-const canUseNewLogs = () => {
+const canUseNewLogsPosition = () => {
   const newUserTestVariant = getSplitTestVariant('editor-redesign-new-users')
   const canUseNewLogsViaNewUserFeatureFlag =
     isNewUser() && newUserTestVariant === 'new-editor'
+
+  return (
+    canUseNewEditorViaPrimaryFeatureFlag() || canUseNewLogsViaNewUserFeatureFlag
+  )
+}
+
+const canUseNewLogs = () => {
+  const newUserTestVariant = getSplitTestVariant('editor-redesign-new-users')
+  const canUseNewLogsViaNewUserFeatureFlag =
+    isNewUser() &&
+    (newUserTestVariant === 'new-editor' ||
+      newUserTestVariant === 'new-editor-new-logs-old-position')
 
   return (
     canUseNewEditorViaPrimaryFeatureFlag() || canUseNewLogsViaNewUserFeatureFlag
@@ -58,6 +75,11 @@ export const useIsNewEditorEnabled = () => {
   const hasAccess = canUseNewEditor()
   const enabled = userSettings.enableNewEditor
   return hasAccess && enabled
+}
+
+export const useIsNewErrorLogsPositionEnabled = () => {
+  const newEditorEnabled = useIsNewEditorEnabled()
+  return newEditorEnabled && canUseNewLogsPosition()
 }
 
 export const useAreNewErrorLogsEnabled = () => {

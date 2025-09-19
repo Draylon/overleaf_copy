@@ -129,19 +129,19 @@ services:
       - sharelatex_data:/var/lib/
     #ports:
     #  - 8010:80  # you can change 8010 to any available host port
-    labels:
-      - traefik.enable=true
-      - traefik.docker.network=coolify
-    
-      # HTTPS router (gets the cert)
-      - traefik.http.routers.overleaf-https.rule=Host(`overleaf.draylon.dev`)
-      - traefik.http.routers.overleaf-https.entrypoints=https
-      - traefik.http.routers.overleaf-https.tls=true
-      - traefik.http.routers.overleaf-https.tls.certresolver=letsencrypt
-      - traefik.http.services.overleaf.loadbalancer.server.port=80
-    
-      # HTTP router -> redirect to HTTPS
-      - traefik.http.routers.overleaf-http.rule=Host(`overleaf.draylon.dev`)
-      - traefik.http.routers.overleaf-http.entrypoints=http
-      - traefik.http.routers.overleaf-http.middlewares=overleaf-redirect
-      - traefik.http.middlewares.overleaf-redirect.redirectscheme.scheme=https
+    #labels:
+    #  - traefik.enable=true
+    #  - traefik.docker.network=coolify
+    #
+    #  # HTTPS router (gets the cert)
+    #  - traefik.http.routers.overleaf-https.rule=Host(`overleaf.draylon.dev`)
+    #  - traefik.http.routers.overleaf-https.entrypoints=https
+    #  - traefik.http.routers.overleaf-https.tls=true
+    #  - traefik.http.routers.overleaf-https.tls.certresolver=letsencrypt
+    #  - traefik.http.services.overleaf.loadbalancer.server.port=80
+    # 
+    #  # HTTP router -> redirect to HTTPS
+    #  - traefik.http.routers.overleaf-http.rule=Host(`overleaf.draylon.dev`)
+    #  - traefik.http.routers.overleaf-http.entrypoints=http
+    #  - traefik.http.routers.overleaf-http.middlewares=overleaf-redirect
+    #  - traefik.http.middlewares.overleaf-redirect.redirectscheme.scheme=https

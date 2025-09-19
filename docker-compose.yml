@@ -127,6 +127,10 @@ services:
       OVERLEAF_ALLOW_ANONYMOUS_READ_AND_WRITE_SHARING: 'false'
     volumes:
       - sharelatex_data:/var/lib/
+    networks:
+      default:
+        aliases:
+          - shst-overleaf
     #ports:
     #  - 8010:80  # you can change 8010 to any available host port
     #labels:
